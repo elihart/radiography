@@ -145,8 +145,14 @@ private fun Group.subComposedChildren(callChain: List<CallGroupInfo>, semanticsO
  * view, and it would be reported by this function. That would almost certainly be a code smell for
  * a number of reasons though, so we don't try to ignore those cases.
  */
+// Visible for testing. The signature is stable and the fast-path behavior is covered by unit
+// tests against `data.isEmpty() && !data.isEmpty()` shaped Groups.
 @OptIn(InternalComposeUiApi::class)
-private fun Group.androidViewChildren(): List<AndroidViewInfo> {
+internal fun Group.androidViewChildren(): List<AndroidViewInfo> {
+  // Fast-path: most Groups have no `data` entries at all, and for Compose-only trees none of
+  // them is an InteroperableComposeUiNode. Skipping the mapNotNull allocation here avoids an
+  // allocation and a type-test per Group for the common case.
+  if (data.isEmpty()) return emptyList()
   return data.mapNotNull { datum ->
     (datum as? InteroperableComposeUiNode)
       ?.getInteropView()
