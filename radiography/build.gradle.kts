@@ -74,6 +74,8 @@ dependencies {
   testImplementation(libs.test.mockito)
   testImplementation(libs.test.robolectric)
   testImplementation(libs.test.truth)
+  testImplementation(libs.compose.toolingData)
+  testImplementation(libs.compose.tooling)
 
   androidTestImplementation(libs.test.androidx.core)
   androidTestImplementation(libs.test.androidx.espresso)
