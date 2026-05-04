@@ -29,6 +29,11 @@ private val REFLECTION_CONSTANTS by lazy(PUBLICATION) {
 
 @OptIn(UiToolingDataApi::class)
 internal fun Group.getCompositionContexts(): Sequence<CompositionContext> {
+  // Fast-path: most Groups have no `data` entries at all — skip the sequence + filter +
+  // mapNotNull pipeline allocation for the common case. Compose-only trees almost never
+  // carry a `CompositionContextHolder` directly on a Group's `data`, so this short-circuits
+  // the vast majority of recursive calls cheaply.
+  if (data.isEmpty()) return emptySequence()
   return REFLECTION_CONSTANTS?.run {
     data.asSequence()
       .filter { it != null && it::class.java == ReusableRememberObserverHolderClass }
