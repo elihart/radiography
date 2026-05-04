@@ -81,7 +81,14 @@ internal fun Group.computeLayoutInfos(
 
   // Things that we want to consider children of the current node, but aren't actually child nodes
   // as reported by Group.children.
-  val irregularChildren = subComposedChildren(callChain, semanticsOwner) + androidViewChildren()
+  //
+  // Both irregular-children sources (subcomposed + AndroidView) are derived from `Group.data`.
+  // When `data` is empty, both are trivially empty — skip the `Sequence + List` concat wrapper
+  // (and the lazy Sequence wrappers inside `subComposedChildren`) so empty-data Groups pay zero
+  // allocation for irregular children.
+  val irregularChildren: Sequence<ComposeLayoutInfo> =
+    if (data.isEmpty()) emptySequence()
+    else subComposedChildren(callChain, semanticsOwner) + androidViewChildren()
 
   // Certain composables produce an internal structure that is hard to read if we report it exactly.
   // Instead, we use heuristics to recognize subtrees that match certain expected structures and
@@ -124,7 +131,14 @@ internal fun Group.computeLayoutInfos(
  * The compositionData val is marked as internal, and not intended for public consumption.
  * The returned [SubcompositionInfo]s should be collated by [tryParseSubcomposition].
  */
-private fun Group.subComposedChildren(callChain: List<CallGroupInfo>, semanticsOwner: SemanticsOwner?): Sequence<SubcompositionInfo> =
+// Visible for testing — the call-site fast-path microbenchmark needs to exercise the
+// pre-fast-path concat path explicitly, which requires invoking this helper directly.
+// Not part of the public API; package-private `internal` keeps it callable only from other
+// `radiography.internal` code.
+internal fun Group.subComposedChildren(
+  callChain: List<CallGroupInfo>,
+  semanticsOwner: SemanticsOwner?
+): Sequence<SubcompositionInfo> =
   getCompositionContexts()
     .flatMap { it.tryGetComposers().asSequence() }
     .map { subcomposer ->
